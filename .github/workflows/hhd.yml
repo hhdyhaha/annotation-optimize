@@ -5,21 +5,24 @@ permissions:
   contents: write
 
 jobs:
-  npm-build:
+  pnpm-build:
     name: 打包部署
     runs-on: ubuntu-latest
     steps:
       - name: 读取仓库代码
         uses: actions/checkout@v4
-      - name: 设置 pnpm
-        run: |
-          npm install -g pnpm
-      - name: 安装依赖和项目打包
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.12.2' # 根据你的项目需求选择合适的 Node.js 版本
+      - name: 安装 pnpm
+        run: npm install -g pnpm
+      - name: 使用 pnpm 安装依赖和项目打包
         run: |
           pnpm install
-          pnpm docs:build
+          pnpm run build
       - name: 部署
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: hhd-pages
-          folder: src/.vuepress/dist
+          branch: hhd-pages # 确保分支名称正确
+          folder: dist
