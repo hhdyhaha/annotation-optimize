@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { solarizedlight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { diffLines } from 'diff';
 
 function MainPage() {
     const [sourceCode, setSourceCode] = useState('');
-    const [optimizedCode, setOptimizedCode] = useState('');
     const [diffResult, setDiffResult] = useState<string[]>([]);
-    
+
     const handleSourceCodeChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         setSourceCode(event.target.value);
-        setOptimizedCode(event.target.value);
     };
 
     const handleReset = () => {
         setSourceCode('');
-        setOptimizedCode('');
         setDiffResult([]);
     };
 
@@ -47,26 +44,24 @@ function MainPage() {
                 throw new Error('网络响应不正常');
             }
             const data = await response.json();
-            setOptimizedCode(data.optimizedCode);
+            const message = data.output.choices[0].message.content
+            const codeBlocks = extractCodeBlocks(message);
+            setDiffResult(codeBlocks);
         } catch (error) {
             console.error('去除注释失败:', error);
             // 这里可以添加错误处理，比如显示一个错误消息给用户
         }
     };
 
-    useEffect(() => {
-        const diff = diffLines(sourceCode, optimizedCode);
-        const formattedDiff = diff.map(part => {
-            if (part.added) {
-                return `<span style="background-color: #e6ffed;">${part.value}</span>`;
-            } else if (part.removed) {
-                return `<span style="background-color: #ffeef0;">${part.value}</span>`;
-            } else {
-                return part.value;
-            }
-        });
-        setDiffResult(formattedDiff);
-    }, [sourceCode, optimizedCode]);
+    function extractCodeBlocks(text) {
+        const pattern = /```(.*?)```/gs;
+        const matches = text.match(pattern);
+        if (matches) {
+            // 提取捕获组的内容
+            return matches.map(match => match.replace(/```/g, '').trim());
+        }
+        return [];
+    }
 
     const handleScroll = (e: React.UIEvent<HTMLElement>, targetSelector: string) => {
         const target = document.querySelector(targetSelector);
@@ -98,13 +93,22 @@ function MainPage() {
                         onScroll={(e) => handleScroll(e, 'textarea')}
                         wrapLines={false}
                     >
-                        {diffResult.join('')}
+                        {diffResult}
                     </SyntaxHighlighter>
                 </div>
             </div>
             <div className="flex justify-center space-x-4 mt-8">
                 <button onClick={handleReset} className="px-4 py-2 bg-gray-200 rounded">重置</button>
                 <button onClick={handleRemoveComments} className="px-4 py-2 bg-blue-500 text-white rounded">去除注释</button>
+                {/*添加一个一键复制diffResult代码的功能，样式好看点儿*/}
+                <button
+                    onClick={() => {
+                        navigator.clipboard.writeText(diffResult);
+                    }}
+                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                >
+                    复制优化后的代码
+                </button>
             </div>
         </div>
     );
