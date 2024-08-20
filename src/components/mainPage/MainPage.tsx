@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { solarizedlight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { diffLines } from 'diff';
+import React, {useState} from 'react';
+import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
+import {solarizedlight} from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {diffLines} from 'diff';
 
 function MainPage() {
     const [sourceCode, setSourceCode] = useState('');
@@ -46,7 +46,14 @@ function MainPage() {
             const data = await response.json();
             const message = data.output.choices[0].message.content
             const codeBlocks = extractCodeBlocks(message);
-            setDiffResult(codeBlocks);
+            let codeBlockStr = ''
+            codeBlocks.forEach((codeBlock, index) => {
+                codeBlockStr += `\n${codeBlock}`
+            })
+            let codeBlocksList = []
+            codeBlocksList.push(codeBlockStr)
+            console.log('codeBlocksList', codeBlocksList)
+            setDiffResult(codeBlocksList);
         } catch (error) {
             console.error('去除注释失败:', error);
             // 这里可以添加错误处理，比如显示一个错误消息给用户
@@ -54,13 +61,23 @@ function MainPage() {
     };
 
     function extractCodeBlocks(text) {
-        const pattern = /```(.*?)```/gs;
-        const matches = text.match(pattern);
+        // const pattern = /```(.*?)```/gs;
+        const pattern = /```(\w*)\n([\s\S]*?)\n```\s*/g;
+        const matches = text.matchAll(pattern);
+        // 创建一个数组来存储所有匹配的代码块
+        const codeBlocks = [];
+        console.log('matches', matches);
         if (matches) {
-            // 提取捕获组的内容
-            return matches.map(match => match.replace(/```/g, '').trim());
+            // 遍历所有匹配项
+            for (const match of matches) {
+                // 将第二组捕获的内容添加到数组中
+                codeBlocks.push(match[2]);
+            }
+            return codeBlocks;
+        } else {
+            return null;
         }
-        return [];
+
     }
 
     const handleScroll = (e: React.UIEvent<HTMLElement>, targetSelector: string) => {
@@ -73,7 +90,7 @@ function MainPage() {
     return (
         <div className="flex flex-col">
             <h1 className="text-2xl font-bold mb-4">注释优化工具</h1>
-            <div className="flex flex-row flex-1" style={{ maxHeight: '66vh' }}>
+            <div className="flex flex-row flex-1" style={{maxHeight: '66vh'}}>
                 <div className="w-1/2 p-4">
                     <h2 className="text-xl font-semibold mb-2">源代码</h2>
                     <textarea
@@ -99,7 +116,8 @@ function MainPage() {
             </div>
             <div className="flex justify-center space-x-4 mt-8">
                 <button onClick={handleReset} className="px-4 py-2 bg-gray-200 rounded">重置</button>
-                <button onClick={handleRemoveComments} className="px-4 py-2 bg-blue-500 text-white rounded">去除注释</button>
+                <button onClick={handleRemoveComments} className="px-4 py-2 bg-blue-500 text-white rounded">去除注释
+                </button>
                 {/*添加一个一键复制diffResult代码的功能，样式好看点儿*/}
                 <button
                     onClick={() => {
