@@ -30,7 +30,7 @@ function MainPage() {
                         },
                         {
                             'role': 'user',
-                            'content': `去除注释\n${sourceCode}`
+                            'content': `去除下列代码中的所有注释\n${sourceCode}`
                         }
                     ]
                 },
