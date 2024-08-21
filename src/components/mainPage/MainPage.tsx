@@ -1,11 +1,12 @@
 import React, {useState} from 'react';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {solarizedlight} from 'react-syntax-highlighter/dist/esm/styles/prism';
-import {diffLines} from 'diff';
+import {Spin, message} from 'antd';
 
 function MainPage() {
     const [sourceCode, setSourceCode] = useState('');
     const [diffResult, setDiffResult] = useState<string[]>([]);
+    const [loading, setLoading] = useState(false);
 
     const handleSourceCodeChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         setSourceCode(event.target.value);
@@ -17,6 +18,7 @@ function MainPage() {
     };
 
     const handleRemoveComments = async () => {
+        setLoading(true);
         try {
             const params = {
                 'model': 'qwen-turbo',
@@ -56,7 +58,9 @@ function MainPage() {
             setDiffResult(codeBlocksList);
         } catch (error) {
             console.error('去除注释失败:', error);
-            // 这里可以添加错误处理，比如显示一个错误消息给用户
+            message.error('去除注释失败，请重试');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -77,7 +81,6 @@ function MainPage() {
         } else {
             return null;
         }
-
     }
 
     const handleScroll = (e: React.UIEvent<HTMLElement>, targetSelector: string) => {
@@ -87,48 +90,54 @@ function MainPage() {
         }
     };
 
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(diffResult.join('\n'));
+            message.success('代码复制成功');
+        } catch (error) {
+            console.error('复制失败:', error);
+            message.error('复制失败，请重试');
+        }
+    };
+
     return (
-        <div className="flex flex-col">
-            <h1 className="text-2xl font-bold mb-4">注释优化工具</h1>
-            <div className="flex flex-row flex-1" style={{maxHeight: '66vh'}}>
-                <div className="w-1/2 p-4">
-                    <h2 className="text-xl font-semibold mb-2">源代码</h2>
-                    <textarea
-                        className="w-full h-full p-2 border rounded overflow-auto"
-                        value={sourceCode}
-                        onChange={handleSourceCodeChange}
-                        placeholder="在此输入源代码..."
-                        onScroll={(e) => handleScroll(e, '.syntax-highlighter')}
-                        wrap="off"
-                    />
+        <Spin spinning={loading}>
+            <div className="flex flex-col">
+                <h1 className="text-2xl font-bold mb-4">注释优化工具</h1>
+                <div className="flex flex-row flex-1" style={{maxHeight: '66vh'}}>
+                    <div className="w-1/2 p-4">
+                        <h2 className="text-xl font-semibold mb-2">源代码</h2>
+                        <textarea
+                            className="w-full h-full p-2 border rounded overflow-auto"
+                            value={sourceCode}
+                            onChange={handleSourceCodeChange}
+                            placeholder="在此输入源代码..."
+                            onScroll={(e) => handleScroll(e, '.syntax-highlighter')}
+                            wrap="off"
+                        />
+                    </div>
+                    <div className="w-1/2 p-4">
+                        <h2 className="text-xl font-semibold mb-2">优化注释的代码</h2>
+                        <SyntaxHighlighter
+                            style={solarizedlight}
+                            className="h-full overflow-auto syntax-highlighter"
+                            onScroll={(e) => handleScroll(e, 'textarea')}
+                            wrapLines={false}
+                        >
+                            {diffResult}
+                        </SyntaxHighlighter>
+                    </div>
                 </div>
-                <div className="w-1/2 p-4">
-                    <h2 className="text-xl font-semibold mb-2">优化注释的代码</h2>
-                    <SyntaxHighlighter
-                        style={solarizedlight}
-                        className="h-full overflow-auto syntax-highlighter"
-                        onScroll={(e) => handleScroll(e, 'textarea')}
-                        wrapLines={false}
-                    >
-                        {diffResult}
-                    </SyntaxHighlighter>
+                <div className="flex justify-center space-x-4 mt-8">
+                    <button onClick={handleReset} className="px-4 py-2 bg-gray-200 rounded">重置</button>
+                    <button onClick={handleRemoveComments}
+                            className="px-4 py-2 bg-blue-500 text-white rounded">去除注释
+                    </button>
+                    <button onClick={handleCopy} className="px-4 py-2 bg-blue-500 text-white rounded">复制优化后的代码
+                    </button>
                 </div>
             </div>
-            <div className="flex justify-center space-x-4 mt-8">
-                <button onClick={handleReset} className="px-4 py-2 bg-gray-200 rounded">重置</button>
-                <button onClick={handleRemoveComments} className="px-4 py-2 bg-blue-500 text-white rounded">去除注释
-                </button>
-                {/*添加一个一键复制diffResult代码的功能，样式好看点儿*/}
-                <button
-                    onClick={() => {
-                        navigator.clipboard.writeText(diffResult);
-                    }}
-                    className="px-4 py-2 bg-blue-500 text-white rounded"
-                >
-                    复制优化后的代码
-                </button>
-            </div>
-        </div>
+        </Spin>
     );
 }
 
