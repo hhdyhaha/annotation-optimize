@@ -90,13 +90,29 @@ function MainPage() {
         }
     };
 
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(diffResult.join('\n'));
-            message.success('代码复制成功');
-        } catch (error) {
-            console.error('复制失败:', error);
-            message.error('复制失败，请重试');
+    const handleCopy = () => {
+        const textToCopy = diffResult.join('\n');
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                message.success('代码复制成功');
+            }).catch((error) => {
+                console.error('复制失败:', error);
+                message.error('复制失败，请重试');
+            });
+        } else {
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                message.success('代码复制成功');
+            } catch (error) {
+                console.error('复制失败:', error);
+                message.error('复制失败，请重试');
+            }
+            document.body.removeChild(textArea);
         }
     };
 
